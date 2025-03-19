@@ -1,0 +1,11 @@
+# No external dependencies required for basic functionality
+# The script uses only standard Python libraries:
+# - json
+# - csv
+# - os
+# - sys
+# - datetime
+
+# If you want to add optional enhancements, you might consider:
+pandas>=1.3.0  # For more advanced data manipulation
+tqdm>=4.62.0   # For progress bars when processing large files
