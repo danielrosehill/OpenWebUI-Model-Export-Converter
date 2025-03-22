@@ -58,29 +58,42 @@ def extract_model_data(input_file):
         
         # Extract the required fields for each model
         models = []
+        skipped = 0
         for model in data:
+            # Initialize system_prompt to check if it exists
+            system_prompt = ""
+            
+            # Extract system prompt from nested structure
+            if "info" in model and isinstance(model["info"], dict):
+                info = model["info"]
+                
+                # Get system prompt from params if it exists
+                if "params" in info and isinstance(info["params"], dict):
+                    system_prompt = info["params"].get("system", "")
+            
+            # Skip models without a system prompt
+            if not system_prompt:
+                skipped += 1
+                continue
+                
             model_data = {
                 "name": model.get("name", "").strip(),
                 "description": "",
-                "system_prompt": "",
+                "system_prompt": system_prompt,
                 "link": f"openwebui://model/{model.get('id', '')}"
             }
             
-            # Extract description and system prompt from nested structure
+            # Extract description from nested structure
             if "info" in model and isinstance(model["info"], dict):
                 info = model["info"]
                 
                 # Get description from meta if it exists
                 if "meta" in info and isinstance(info["meta"], dict):
                     model_data["description"] = info["meta"].get("description", "")
-                
-                # Get system prompt from params if it exists
-                if "params" in info and isinstance(info["params"], dict):
-                    model_data["system_prompt"] = info["params"].get("system", "")
             
             models.append(model_data)
         
-        print(f"Successfully extracted data for {len(models)} models")
+        print(f"Successfully extracted data for {len(models)} models (skipped {skipped} models without system prompts)")
         return models
     
     except json.JSONDecodeError:
