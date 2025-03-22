@@ -41,8 +41,12 @@ class ExportApp:
         # Field selection variables and structure
         self.field_vars = {}
         self.field_structure = {
+            "Primary Fields": [
+                {"name": "name", "display": "Name", "default": True},
+                {"name": "info.meta.description", "display": "Description", "default": True},
+                {"name": "info.params.system", "display": "System Prompt", "default": True},
+            ],
             "Basic": [
-                {"name": "name", "display": "Model Name", "default": True},
                 {"name": "id", "display": "Model ID", "default": False},
                 {"name": "object", "display": "Object Type", "default": False},
                 {"name": "created", "display": "Creation Timestamp", "default": False},
@@ -56,11 +60,7 @@ class ExportApp:
                 {"name": "info.created_at", "display": "Info Created At", "default": False},
                 {"name": "info.updated_at", "display": "Info Updated At", "default": False},
             ],
-            "Params": [
-                {"name": "info.params.system", "display": "System Prompt", "default": True},
-            ],
             "Meta": [
-                {"name": "info.meta.description", "display": "Description", "default": True},
                 {"name": "info.meta.profile_image_url", "display": "Profile Image URL", "default": False},
                 {"name": "info.meta.capabilities.usage", "display": "Usage Capability", "default": False},
                 {"name": "info.meta.capabilities.vision", "display": "Vision Capability", "default": False},
@@ -81,9 +81,20 @@ class ExportApp:
     
     def create_ui(self):
         """Create the user interface"""
-        # Main frame
-        main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        # Create notebook for tabs
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(fill=tk.BOTH, expand=True)
+        
+        # Main tab
+        main_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(main_frame, text="Export")
+        
+        # About tab
+        about_frame = ttk.Frame(self.notebook, padding="10")
+        self.notebook.add(about_frame, text="About")
+        
+        # Create about tab content
+        self.create_about_tab(about_frame)
         
         # File selection frame
         file_frame = ttk.LabelFrame(main_frame, text="File Selection", padding="10")
@@ -176,6 +187,18 @@ class ExportApp:
         default_input = os.path.join(os.path.dirname(os.path.abspath(__file__)), "workspace", "input", "input.json")
         if os.path.exists(default_input):
             self.input_file_var.set(default_input)
+    
+    def create_about_tab(self, about_frame):
+        """Create the about tab content"""
+        # Create a label with the about text
+        about_text = "OpenWebUI Model Export Utility\n\n"
+        about_text += "Version: 1.0\n"
+        about_text += "Author: [Your Name]\n"
+        about_text += "License: MIT License\n"
+        about_text += "\n"
+        about_text += "This utility allows you to export OpenWebUI model data with customizable field selection and output format options."
+        
+        ttk.Label(about_frame, text=about_text, wraplength=600, justify=tk.LEFT).pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
     
     def initialize_field_checkboxes(self):
         """Initialize the field selection checkboxes"""
@@ -430,28 +453,101 @@ class ExportApp:
         if not data:
             raise ValueError("No data to export")
         
+        # Define the primary fields in the desired order
+        primary_fields = ["name", "info.meta.description", "info.params.system"]
+        
         # Get all unique keys from all items
         all_keys = set()
         for item in data:
             all_keys.update(item.keys())
         
-        # Sort keys for consistent column order
-        fieldnames = sorted(all_keys)
+        # Sort keys with primary fields first, then others alphabetically
+        fieldnames = []
+        
+        # Add primary fields first (if they exist in the data)
+        for field in primary_fields:
+            if field in all_keys:
+                fieldnames.append(field)
+                all_keys.remove(field)
+        
+        # Add remaining fields alphabetically
+        fieldnames.extend(sorted(all_keys))
+        
+        # Rename the headers to be more user-friendly
+        header_mapping = {
+            "name": "name",
+            "info.meta.description": "description",
+            "info.params.system": "system_prompt"
+        }
         
         with open(output_path, 'w', encoding='utf-8', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(data)
+            # Use custom header names for the CSV
+            writer = csv.writer(f)
+            
+            # Write header row with friendly names
+            header_row = []
+            for field in fieldnames:
+                header_row.append(header_mapping.get(field, field))
+            
+            writer.writerow(header_row)
+            
+            # Write data rows
+            for item in data:
+                row = []
+                for field in fieldnames:
+                    row.append(item.get(field, ""))
+                writer.writerow(row)
+    
+    def export_to_excel(self, data, output_path):
+        """Export data to Excel format"""
+        if not data:
+            raise ValueError("No data to export")
+            
+        # Define the primary fields in the desired order
+        primary_fields = ["name", "info.meta.description", "info.params.system"]
+        
+        # Get all unique keys from all items
+        all_keys = set()
+        for item in data:
+            all_keys.update(item.keys())
+        
+        # Sort keys with primary fields first, then others alphabetically
+        fieldnames = []
+        
+        # Add primary fields first (if they exist in the data)
+        for field in primary_fields:
+            if field in all_keys:
+                fieldnames.append(field)
+                all_keys.remove(field)
+        
+        # Add remaining fields alphabetically
+        fieldnames.extend(sorted(all_keys))
+        
+        # Rename the headers to be more user-friendly
+        header_mapping = {
+            "name": "name",
+            "info.meta.description": "description",
+            "info.params.system": "system_prompt"
+        }
+        
+        # Create a DataFrame with ordered columns
+        df = pd.DataFrame(data)
+        
+        # Reorder columns based on fieldnames
+        ordered_columns = [col for col in fieldnames if col in df.columns]
+        df = df[ordered_columns]
+        
+        # Rename columns
+        rename_dict = {col: header_mapping.get(col, col) for col in df.columns}
+        df = df.rename(columns=rename_dict)
+        
+        # Export to Excel
+        df.to_excel(output_path, index=False)
     
     def export_to_json(self, data, output_path):
         """Export data to JSON format"""
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)
-    
-    def export_to_excel(self, data, output_path):
-        """Export data to Excel format"""
-        df = pd.DataFrame(data)
-        df.to_excel(output_path, index=False)
     
     def export_to_yaml(self, data, output_path):
         """Export data to YAML format"""
@@ -509,13 +605,32 @@ class ExportApp:
         if not data:
             raise ValueError("No data to export")
         
+        # Define the primary fields in the desired order
+        primary_fields = ["name", "info.meta.description", "info.params.system"]
+        
         # Get all unique keys from all items
         all_keys = set()
         for item in data:
             all_keys.update(item.keys())
         
-        # Sort keys for consistent column order
-        headers = sorted(all_keys)
+        # Sort keys with primary fields first, then others alphabetically
+        headers = []
+        
+        # Add primary fields first (if they exist in the data)
+        for field in primary_fields:
+            if field in all_keys:
+                headers.append(field)
+                all_keys.remove(field)
+        
+        # Add remaining fields alphabetically
+        headers.extend(sorted(all_keys))
+        
+        # Rename the headers to be more user-friendly
+        header_mapping = {
+            "name": "name",
+            "info.meta.description": "description",
+            "info.params.system": "system_prompt"
+        }
         
         # Create markdown table
         with open(output_path, 'w', encoding='utf-8') as f:
@@ -523,8 +638,12 @@ class ExportApp:
             f.write("# OpenWebUI Model Export\n\n")
             f.write("Generated on: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n\n")
             
-            # Write table headers
-            f.write("| " + " | ".join(headers) + " |\n")
+            # Write table headers with friendly names
+            header_row = []
+            for field in headers:
+                header_row.append(header_mapping.get(field, field))
+            
+            f.write("| " + " | ".join(header_row) + " |\n")
             f.write("| " + " | ".join(["---"] * len(headers)) + " |\n")
             
             # Write table rows

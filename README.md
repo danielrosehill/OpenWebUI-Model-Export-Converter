@@ -10,8 +10,7 @@ A collection of Python scripts and a GUI utility for processing and streamlining
 
 ## Purpose
 
-The primary purpose of these tools is to:
-
+The primary purpose of these tools is to 
 1. Streamline backing up model collections in a more condensed fashion
 2. Remove OpenWebUI-specific elements that might not be required when importing elsewhere
 3. Improve the portability of models across different platforms
