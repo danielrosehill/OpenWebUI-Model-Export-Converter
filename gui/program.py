@@ -356,6 +356,32 @@ class ExportApp:
                 extracted_data.append(extracted_item)
                 self.update_status(f"Extracting: {i+1}/{total_items}", 30 + (i+1) * 40 / total_items)
             
+            # Create individual markdown files for each model
+            self.update_status("Creating individual model markdown files...", 65)
+            individual_configs_dir = os.path.join(self.output_dir_var.get(), f"export_{timestamp}", "individual-configs")
+            os.makedirs(individual_configs_dir, exist_ok=True)
+            
+            # Create individual markdown files
+            for i, item in enumerate(extracted_data):
+                model_name = item.get("name", "Unknown Model")
+                description = item.get("info.meta.description", "")
+                system_prompt = item.get("info.params.system", "")
+                
+                # Create a computer-friendly filename
+                filename = model_name.lower().replace(" ", "-").replace("/", "-").replace("\\", "-")
+                filename = ''.join(c for c in filename if c.isalnum() or c in ['-', '_'])
+                filename = f"{filename}.md"
+                
+                # Write the markdown file
+                with open(os.path.join(individual_configs_dir, filename), 'w', encoding='utf-8') as f:
+                    f.write(f"## {model_name}\n\n")
+                    f.write("## Description\n\n")
+                    f.write(f"{description}\n\n")
+                    f.write("## System Prompt\n\n")
+                    f.write(f"{system_prompt}\n")
+                
+                self.update_status(f"Creating individual files: {i+1}/{len(extracted_data)}", 65 + (i+1) * 5 / len(extracted_data))
+            
             # Export to selected format(s)
             export_format = self.export_format_var.get()
             
@@ -393,6 +419,8 @@ class ExportApp:
                 for fmt in formats:
                     success_message += f"\n- export_{timestamp}{format_ext[fmt]}"
                 
+                success_message += f"\n\nIndividual model markdown files created in:\n- export_{timestamp}/individual-configs/"
+                
                 self.root.after(0, lambda: messagebox.showinfo("Success", success_message))
             else:
                 # Export to a single format
@@ -415,7 +443,7 @@ class ExportApp:
                 self.update_status(f"Export completed successfully: {os.path.basename(output_path)}", 100)
                 
                 # Show success message
-                self.root.after(0, lambda: messagebox.showinfo("Success", f"Export completed successfully!\n\nOutput file: {os.path.basename(output_path)}"))
+                self.root.after(0, lambda: messagebox.showinfo("Success", f"Export completed successfully!\n\nOutput file: {os.path.basename(output_path)}\n\nIndividual model markdown files created in:\n- export_{timestamp}/individual-configs/"))
             
         except Exception as e:
             error_message = f"Error during export: {str(e)}\n\n{traceback.format_exc()}"
