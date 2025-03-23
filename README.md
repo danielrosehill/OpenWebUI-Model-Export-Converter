@@ -21,7 +21,7 @@ Individual model configurations are stored as rows in the `model` table in the O
 
 An SQL query to retrieve the name, system prompt and descriptions:
 
-`mysql
+```mysql
 SELECT 
     name,
     (meta::json)->>'description' as description,
