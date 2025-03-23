@@ -15,6 +15,21 @@ The primary purpose of these tools is to
 2. Remove OpenWebUI-specific elements that might not be required when importing elsewhere
 3. Improve the portability of models across different platforms
 
+## SQL
+
+Individual model configurations are stored as rows in the `model` table in the OpenWebUI database.
+
+An SQL query to retrieve the name, system prompt and descriptions:
+
+`mysql
+SELECT 
+    name,
+    (meta::json)->>'description' as description,
+    (params::json)->>'system' as system_prompt
+FROM model
+ORDER BY name;
+```
+
 ## Features
 
 ### GUI Utility
